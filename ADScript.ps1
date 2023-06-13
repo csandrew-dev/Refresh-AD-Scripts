@@ -2,6 +2,12 @@
 #Author: Andrew Schwartz
 #Version: alpha 1.0
 
+
+Function Log-Message([String]$Message)
+{
+    Add-Content -Path "C:\Users\Administrator\Desktop\Log.txt" $Message
+}
+
 do {
 
 Write-Host "--Refresh AD Tools--"
@@ -35,6 +41,19 @@ ADD-ADGroupMember -Identity $GROUP -Members $COMPUTER
 Set-ADComputer -Identity $COMPUTER -Description $DESCRIPTION
 
 Write-Host "Added. `n"
+
+
+#LOGGING
+#$CREDS = Get-Credential
+#New-PSDrive -Name "Q" - PSProvider "FileSystem" -Root "\\umd.its.share.adsroot.itcs.umich.edu\shared" -Persist -Credential $CREDS
+
+$LogPath = "Q:\Backups\RefreshTools\ADScriptLog.txt"
+$TestLogPath = "C:\Desktop\Log.txt"
+$USER = whoami
+$DATE = Get-Date
+Log-Message "$DATE $USER $COMPUTERName $DESCRIPTION $GROUP"
+
+
 }
 2{
 #Moving computer in AD  
@@ -44,3 +63,4 @@ Write-Host "Added. `n"
 }#close switch
 
 }until ($CHOICE -eq 'q')
+ 
