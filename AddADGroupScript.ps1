@@ -4,7 +4,7 @@
 #06142023 
 
 
-Function Log-Message([String]$Message)
+Function Write-Log([String]$Message)
 {
     Add-Content -Path "C:\Users\Administrator\Desktop\Log.txt" $Message
 }
@@ -48,8 +48,8 @@ Write-Host "Added. `n"
 #$CREDS = Get-Credential
 #New-PSDrive -Name "Q" - PSProvider "FileSystem" -Root "\\umd.its.share.adsroot.itcs.umich.edu\shared" -Persist -Credential $CREDS
 
-$LogPath = "Q:\Backups\RefreshTools\ADScriptLog.txt"
-$TestLogPath = "C:\Desktop\Log.txt"
+#$LogPath = "Q:\Backups\RefreshTools\ADScriptLog.txt"
+#$TestLogPath = "C:\Desktop\Log.txt"
 $USER = whoami
 $DATE = Get-Date
 Log-Message "$DATE $USER $COMPUTERName $DESCRIPTION $GROUP"
