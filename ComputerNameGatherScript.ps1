@@ -2,7 +2,7 @@
 #Author: Andrew Schwartz
 #Version: alpha 1.0
 #06142023 created the intial script with name checking and comments
-$VERSION = 06142023 #change version when updating
+$VERSION = 06212023 #change version when updating
 
 Write-Host "`n `n
  _____       __              _                _____     _____           _       _   
@@ -19,54 +19,67 @@ Write-Host "`n `n
                                                                          `n `n"
 
 
-$REFRESH_GROUP = UMD-REFRESH
-$COMPUTER_NAME
+$REFRESH_GROUP = "UMD-REFRESH"
 $MENU_CHOICE
-$OUTFILE_PATH = "C:\Users\Administrator\Desktop\ComputersToUMD-REFRESH.txt"
+$COMPUTER
+$OUTFILE_PATH = "\\Test-DC\umd-its-share\ComputersToUMD-REFRESH.txt"
+#string array for host names that need to be added to refresh
 
-Out-File $OUTFILE_PATH #create text file with computers to be added to UMD-REFRESH to be read from for other script
+function Write-ADFile {
+
+    param ( [string] $COMPUTER )
+
+    Write-Host "Adding $COMPUTER `n"
+    Add-Content -Path $OUTFILE_PATH -Value "ADD-ADGroupMember -Identity $REFRESH_GROUP -Members $COMPUTER"
+    
+}
+
+function Compare-Machine {
+
+    param ( [string] $COMPUTER )
+
+
+    try{
+            Get-ADComputer -Identity $COMPUTER -ErrorAction Stop | Out-Null #check if computer is in AD, but doens't pipe output to screen.
+            $IsInRefresh = Get-ADGroupMember -Identity $REFRESH_GROUP | Where-Object {$_.name -eq $COMPUTER} #Checks if computer is in UMD-Refresh group and store in bool
+           
+        if($IsInRefresh){
+            Write-Host "`n$COMPUTER is already in refresh!" -ForegroundColor Green #Informs user machine is already in refresh
+        } elseif (!$IsInRefresh){
+            Write-Host "`n$COMPUTER is not in refresh, adding..." -ForegroundColor Red #Informs user machine is not in refresh
+            Write-ADFile($COMPUTER)
+        }
+    }
+    catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]{
+        Write-Host "`n$COMPUTER not found `n" -ForegroundColor Red #Informs user machine isn't in AD or that name is incorrect
+    }
+}
+
+
 
 do{
     Write-Host "REFRESH AD ADDING TOOL"
     Write-Host "1. Add Computers to UMD-REFRESH"
     Write-Host "2. Quit program, press 'q'"
     $MENU_CHOICE = Read-Host "You choose"
-    $COMPUTER_NAME = Read-Host "Input computer name (eg. UMD-******)"
-    Write-Host  "Computer name is " $COMPUTER_NAME "`n"
+    switch($MENU_CHOICE){
+        1{
+
+            $HOSTNAMES = Read-Host -Prompt "Enter hostnames (separated by commas)"
+            # Convert the input into an array of hostnames
+            $HOSTNAMES -replace '\s', ''
+            $HOSTNAMESARRAY = $HOSTNAMES -split ','
+
+            $HOSTNAMESARRAY | ForEach-Object {
+                $COMPUTER = $_
+                Compare-Machine ($COMPUTER) #checks if machine name is valid
+            }
+            
+        }
+        2{
+            exit #if they misundstand directions
+        }
+    }#close switch
     
-    Compare-Machine($COMPUTER_NAME, $REFRESH_GROUP)
 
 } until($MENU_CHOICE -eq 'q')
-
-function Compare-Machine{
-
-    param{
-        $COMPUTER_NAME
-        $REFRESH_GROUP
-    }
-
-    try{
-            Get-ADComputer -Identity $COMPUTER_NAME -ErrorAction Stop | Out-Null #check if computer is in AD, but doens't pipe output to screen.
-            $IsInRefresh = Get-ADGroupMember -Identity $REFRESH_GROUP | Where-Object {$_.name -eq $COMPUTER_NAME} #Checks if computer is in UMD-Refresh group and store in bool
-            if($IsInRefresh){
-            Write-Host "`n $COMPUTER_NAME is already in refresh" -ForegroundColor Green #Informs user machine is already in refresh
-            exit #exits the script
-        } elseif (!$IsInRefresh){
-            Write-Host "`n $COMPUTER_NAME is not in refresh" -ForegroundColor Red #Informs user machine is not in refresh
-        }
-    }
-    catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]{
-        Write-Host "`n $COMPUTER_NAME not found" -ForegroundColor Red #Informs user machine isn't in AD or that name is incorrect
-    }
-}
-
-function Write-ADFile {
-    param {
-        $OUTFILE_PATH
-        $COMPUTER_NAME
-        $REFRESH_GROUP
-    }
-    
-
-
-}
