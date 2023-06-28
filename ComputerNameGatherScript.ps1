@@ -2,7 +2,9 @@
 #Author: Andrew Schwartz
 #Version: alpha 1.0
 #06142023 created the intial script with name checking and comments
-$VERSION = 06212023 #change version when updating
+#06282023 added the description editing
+$VERSION = 06282023 #change version when updating
+
 
 Write-Host "`n `n
  _____       __              _                _____     _____           _       _   
@@ -19,24 +21,35 @@ Write-Host "`n `n
                                                                          `n `n"
 
 
-$REFRESH_GROUP = "UMD-REFRESH"
-$MENU_CHOICE
-$COMPUTER
-$OUTFILE_PATH = "\\Test-DC\umd-its-share\ComputersToUMD-REFRESH.txt"
-#string array for host names that need to be added to refresh
+$REFRESH_GROUP = "UMD-REFRESH" #Variable for Refresh Group
+$MENU_CHOICE #Menu variable for choosing option
+$COMPUTER #computer name variable
+$OUTFILE_PATH = "\\Test-DC\umd-its-share\ComputersToUMD-REFRESH.txt" #UNC path for machines to be added to refreshs text file on shared drive
 
 function Write-ADFile {
 
-    param ( [string] $COMPUTER )
+    param ( [string] $COMPUTER ) #pass in computer
 
-    Write-Host "Adding $COMPUTER `n"
-    Add-Content -Path $OUTFILE_PATH -Value "ADD-ADGroupMember -Identity $REFRESH_GROUP -Members $COMPUTER"
+    Add-Content -Path $OUTFILE_PATH -Value "`$COMPUTERNAME = Get-ADComputer -Identity $COMPUTER" #writes out the get-Computer command and stores in var computer name
+    Add-Content -Path $OUTFILE_PATH -Value "ADD-ADGroupMember -Identity $REFRESH_GROUP -Members `$COMPUTERNAME" #writes out the add-groupmember command with proper formatting
     
 }
 
+function Write-Description {
+    
+   param ( [string] $COMPUTER ) #pass in computer
+
+   $DESCRIPTION = Read-Host -Prompt "Enter $COMPUTER's description. Follow this format: UM-D [Unit] [Department] [Building] [Room Number]" #asks for description input and stores in description var
+   Add-Content -Path $OUTFILE_PATH -Value "Set-ADComputer -Identity $COMPUTER -Description `"$DESCRIPTION`"" #adds the descripting editing command to file
+
+   Write-Host "Adding $COMPUTER, $DESCRIPTION `n" #prints out what is being "added" with name and description
+
+
+} 
+
 function Compare-Machine {
 
-    param ( [string] $COMPUTER )
+    param ( [string] $COMPUTER ) #pass in computer
 
 
     try{
@@ -46,15 +59,15 @@ function Compare-Machine {
         if($IsInRefresh){
             Write-Host "`n$COMPUTER is already in refresh!" -ForegroundColor Green #Informs user machine is already in refresh
         } elseif (!$IsInRefresh){
-            Write-Host "`n$COMPUTER is not in refresh, adding..." -ForegroundColor Red #Informs user machine is not in refresh
-            Write-ADFile($COMPUTER)
+            Write-Host "`n$COMPUTER is not in refresh, adding..." -ForegroundColor Red #Informs user machine is not in refresh and goes through adding process
+            Write-Description ($COMPUTER) #goes through description adding process, writes to file
+            Write-ADFile($COMPUTER) #writes the get-computer and add-groupmember commands to file
         }
     }
-    catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]{
-        Write-Host "`n$COMPUTER not found `n" -ForegroundColor Red #Informs user machine isn't in AD or that name is incorrect
+    catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]{ #error if machine doesn't exist in AD
+        Write-Host "`n$COMPUTER not found, may not be in Active Directory `n" -ForegroundColor Red #Informs user machine isn't in AD or that name is incorrect
     }
 }
-
 
 
 do{
@@ -65,21 +78,20 @@ do{
     switch($MENU_CHOICE){
         1{
 
-            $HOSTNAMES = Read-Host -Prompt "Enter hostnames (separated by commas)"
-            # Convert the input into an array of hostnames
-            $HOSTNAMES -replace '\s', ''
-            $HOSTNAMESARRAY = $HOSTNAMES -split ','
+            $HOSTNAMES = Read-Host -Prompt "Enter hostnames (separated by commas)" #asks for input of machines needed to be added e.g. 'UMD-000001, UMD-000002, ...'
+            $HOSTNAMES -replace '\s', '' #removes all spaces in the string
+            $HOSTNAMESARRAY = $HOSTNAMES -split ',' # Convert the input into an array of hostnames
 
-            $HOSTNAMESARRAY | ForEach-Object {
-                $COMPUTER = $_
-                Compare-Machine ($COMPUTER) #checks if machine name is valid
+            $HOSTNAMESARRAY | ForEach-Object { #loops through each machine 
+                $COMPUTER = $_ #sets computer as current computer in array
+                Compare-Machine ($COMPUTER) #checks if machine name is valid and sets file if necessary
             }
             
         }
         2{
-            exit #if they misundstand directions
+            $MENU_CHOICE = 'q' #sets choice to 'q' so program quits
         }
     }#close switch
     
 
-} until($MENU_CHOICE -eq 'q')
+} until($MENU_CHOICE -eq 'q') #quits program
